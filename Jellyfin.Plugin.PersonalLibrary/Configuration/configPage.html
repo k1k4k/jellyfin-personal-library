@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Personal Library</title>
+</head>
+<body>
+    <div id="PersonalLibraryConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <h2 class="sectionTitle" data-fr="Bibliothèque personnelle" data-en="Personal Library"></h2>
+                <p data-fr="Chaque utilisateur choisit ce qu'il voit, type de contenu par type de contenu (musique, films, séries…). Le masquage passe par les étiquettes du profil : il vaut pour toutes les applications."
+                   data-en="Each user chooses what they see, content type by content type (music, movies, shows…). Hiding relies on profile tags, so it applies to every app."></p>
+                <form id="PersonalLibraryConfigForm">
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="EnableSelfService" type="checkbox" is="emby-checkbox" />
+                            <span data-fr="Les utilisateurs règlent eux-mêmes leur bibliothèque" data-en="Users manage their own library"></span>
+                        </label>
+                    </div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                        <span data-fr="Enregistrer" data-en="Save"></span>
+                    </button>
+                </form>
+                <h3 class="sectionTitle" data-fr="Utilisateurs" data-en="Users"></h3>
+                <div id="PersonalLibraryUsers"></div>
+                <button is="emby-button" type="button" id="PersonalLibraryApply" class="raised emby-button">
+                    <span data-fr="Tout réappliquer" data-en="Reapply all"></span>
+                </button>
+                <button is="emby-button" type="button" id="PersonalLibraryResetAll" class="raised emby-button">
+                    <span data-fr="Tout réinitialiser" data-en="Reset everyone"></span>
+                </button>
+                <p class="fieldDescription" data-fr="« Tout réinitialiser » efface les choix de tous les utilisateurs et retire les étiquettes du plugin. La désinstallation le fait aussi."
+                   data-en="&quot;Reset everyone&quot; clears every user's choices and removes the plugin's tags. Uninstalling does it too."></p>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = '87c7944b-ed92-4cdf-9e97-02b45c8b1057';
+                var fr = (document.documentElement.lang || navigator.language || '').toLowerCase().indexOf('fr') === 0;
+                var page = document.querySelector('#PersonalLibraryConfigPage');
+                page.querySelectorAll('[data-fr]').forEach(function (el) { el.textContent = fr ? el.dataset.fr : el.dataset.en; });
+                var modes = { Except: fr ? 'Tout sauf' : 'All except', Only: fr ? 'Uniquement' : 'Only' };
+                var types = fr
+                    ? { music: 'Musique', movies: 'Films', tvshows: 'Séries', boxsets: 'Collections', musicvideos: 'Clips', homevideos: 'Vidéos perso', books: 'Livres', photos: 'Photos', mixed: 'Mixte' }
+                    : { music: 'Music', movies: 'Movies', tvshows: 'Shows', boxsets: 'Collections', musicvideos: 'Music videos', homevideos: 'Home videos', books: 'Books', photos: 'Photos', mixed: 'Mixed' };
+
+                function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+                function loadUsers() {
+                    ApiClient.getJSON(ApiClient.getUrl('PersonalLibrary/Users')).then(function (users) {
+                        var box = page.querySelector('#PersonalLibraryUsers');
+                        if (!users.length) {
+                            box.innerHTML = '<p>' + (fr ? 'Personne n\'a encore réglé sa bibliothèque.' : 'Nobody has set up their library yet.') + '</p>';
+                            return;
+                        }
+                        box.innerHTML = users.map(function (u) {
+                            var libs = u.types.map(function (t) { return esc(types[t.type] || t.type) + ' : ' + modes[t.mode] + ' (' + t.rules + ')'; }).join(', ') || (fr ? 'tout' : 'everything');
+                            return '<div class="listItem"><div class="listItemBody"><h3 class="listItemBodyText">' + esc(u.userName || u.userId) + '</h3>'
+                                + '<div class="listItemBodyText secondary">' + libs + '</div></div>'
+                                + '<button is="emby-button" type="button" class="raised emby-button" data-reset="' + u.userId + '">' + (fr ? 'Réinitialiser' : 'Reset') + '</button></div>';
+                        }).join('');
+                    });
+                }
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        page.querySelector('#EnableSelfService').checked = config.EnableSelfService;
+                        Dashboard.hideLoadingMsg();
+                    });
+                    loadUsers();
+                });
+
+                page.querySelector('#PersonalLibraryConfigForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.EnableSelfService = page.querySelector('#EnableSelfService').checked;
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(Dashboard.processPluginConfigurationUpdateResult);
+                    });
+                    return false;
+                });
+
+                page.querySelector('#PersonalLibraryUsers').addEventListener('click', function (e) {
+                    var btn = e.target.closest('[data-reset]');
+                    if (!btn) return;
+                    ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl('PersonalLibrary/Me', { userId: btn.dataset.reset }) }).then(function () { setTimeout(loadUsers, 1500); });
+                });
+
+                page.querySelector('#PersonalLibraryResetAll').addEventListener('click', function () {
+                    if (!window.confirm(fr ? 'Effacer les choix de tous les utilisateurs ? Tout redevient visible pour tout le monde.' : 'Clear the choices of every user? Everything becomes visible to everyone again.')) return;
+                    Dashboard.showLoadingMsg();
+                    ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl('PersonalLibrary/Users') }).then(function () { Dashboard.hideLoadingMsg(); loadUsers(); });
+                });
+
+                page.querySelector('#PersonalLibraryApply').addEventListener('click', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('PersonalLibrary/Apply') }).then(function () { Dashboard.hideLoadingMsg(); loadUsers(); });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
