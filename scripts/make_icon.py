@@ -3,8 +3,8 @@
 
     python scripts/make_icon.py [--out icon.png]
 
-Des cartes blanches tombent dans un entonnoir, une seule carte bleue en sort, « Jellyfin » en blanc,
-« Personal Library » en bleu, bandeau dégradé en bas. Police Segoe UI Bold (Windows), sinon DejaVu Sans Bold.
+La grille de la bibliothèque : trois cases gardées en bleu, les autres éteintes, et un médaillon utilisateur
+(sa vue à lui) ; « Jellyfin » en blanc, « Personal Library » en bleu, bandeau dégradé en bas. Police Segoe UI Bold (Windows), sinon DejaVu Sans Bold.
 """
 import argparse
 import os
@@ -17,6 +17,7 @@ BG = (11, 12, 14)
 WHITE = (255, 255, 255)
 BLUE = (13, 193, 245)
 PURPLE = (155, 48, 255)
+DIM = (58, 62, 70)
 
 
 def font(size):
@@ -35,17 +36,25 @@ def main():
     img = Image.new("RGB", (W * s, H * s), BG)
     d = ImageDraw.Draw(img)
 
-    # Contenus du serveur : trois cartes blanches au-dessus de l'entonnoir.
-    for x, y in ((150, 150), (232, 132), (314, 150)):
-        d.rounded_rectangle((x * s, y * s, (x + 64) * s, (y + 84) * s), radius=10 * s, fill=BG, outline=WHITE, width=10 * s)
+    def box(v):
+        return [c * s for c in v]
 
-    # Entonnoir : trapèze blanc puis goulot.
-    cx = 270
-    d.polygon([((cx - 150) * s, 262 * s), ((cx + 150) * s, 262 * s), ((cx + 34) * s, 380 * s), ((cx - 34) * s, 380 * s)], fill=WHITE)
-    d.rectangle(((cx - 34) * s, 378 * s, (cx + 34) * s, 420 * s), fill=WHITE)
+    # Grille de la bibliothèque : ce que l'utilisateur garde en bleu, le reste éteint.
+    x0, y0, cell, gap = 140, 236, 60, 16
+    kept = {(0, 0), (1, 1), (0, 2)}
+    for row in range(3):
+        for col in range(3):
+            x, y = x0 + col * (cell + gap), y0 + row * (cell + gap)
+            if (row, col) in kept:
+                d.rounded_rectangle(box((x, y, x + cell, y + cell)), radius=10 * s, fill=BLUE)
+            else:
+                d.rounded_rectangle(box((x, y, x + cell, y + cell)), radius=10 * s, outline=DIM, width=8 * s)
 
-    # Ce qui reste pour l'utilisateur : une carte bleue sous le goulot.
-    d.rounded_rectangle(((cx - 32) * s, 440 * s, (cx + 32) * s, 524 * s), radius=10 * s, fill=BLUE)
+    # Médaillon utilisateur sur le coin de la grille : tête ronde + buste, détouré du fond.
+    cx, cy, k = 352, 418, 0.8
+    d.ellipse(box((cx - 62 * k, cy - 70 * k, cx + 62 * k, cy + 62 * k)), fill=BG)
+    d.ellipse(box((cx - 30 * k, cy - 52 * k, cx + 30 * k, cy + 8 * k)), fill=WHITE)
+    d.pieslice(box((cx - 52 * k, cy + 4 * k, cx + 52 * k, cy + 108 * k)), 180, 360, fill=WHITE)
 
     # Texte : « Jellyfin » / « Personal Library », réduit si besoin pour tenir dans la largeur.
     left, right = 470 * s, (W - 60) * s
