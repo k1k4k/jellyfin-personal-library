@@ -2,6 +2,10 @@
 
 What's new in each version, as shown in Jellyfin's plugin catalog.
 
+## 0.1.1
+
+- The "My library" button no longer shows over the video player.
+
 ## 0.1.0
 
 - Each user chooses what they see in shared libraries, content type by content type (music, movies, shows…): everything, everything except what they hide, or only what they keep. One setting covers every library of the same type.

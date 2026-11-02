@@ -19,7 +19,7 @@
     'use strict';
 
     if (window.__jfPersonalLibrary) return;
-    var VERSION = '0.1.0';
+    var VERSION = '0.1.1';
     var TAG = '[PersonalLibrary]';
     window.__jfPersonalLibrary = { version: VERSION };
 
@@ -766,12 +766,13 @@
         return null;
     }
 
-    function inDashboard() {
-        return /^#\/(dashboard|configurationpage|plugins|users|libraries|networking|devices|tasks|logs|playback|branding)/i.test(location.hash);
+    // Tableau de bord et lecteur vidéo (sans en-tête : le bouton flottant passerait par-dessus l'image).
+    function noButtonPage() {
+        return /^#\/(dashboard|configurationpage|plugins|users|libraries|networking|devices|tasks|logs|playback|branding|video)\b/i.test(location.hash);
     }
 
     function wanted() {
-        return !!(me && currentUserId() && !inDashboard() && (me.canEdit || me.types.some(function (x) { return x.mode !== 'All'; })));
+        return !!(me && currentUserId() && !noButtonPage() && (me.canEdit || me.types.some(function (x) { return x.mode !== 'All'; })));
     }
 
     function updateButton() {
@@ -870,7 +871,7 @@
         // Changement d'utilisateur ou de serveur : pas d'évènement public, on vérifie régulièrement.
         setInterval(onUser, 2000);
         onUser();
-        // Tableau de bord : pas de bouton ; on le remet en revenant.
+        // Tableau de bord, lecteur vidéo : pas de bouton ; on le remet en revenant.
         window.addEventListener('hashchange', function () { if (me) updateButton(); });
         // L'en-tête est reconstruit ou change (classique / React) selon les pages.
         var pending = false;
