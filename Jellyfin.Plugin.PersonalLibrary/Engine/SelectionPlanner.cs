@@ -57,9 +57,18 @@ public sealed class SelectionPlanner
     public IReadOnlyList<CollectionFolder> AccessibleLibraries(User user)
         => _libraryManager.GetUserRootFolder().GetChildren(user, true).OfType<CollectionFolder>().ToList();
 
-    /// <summary>Tous les éléments d'une bibliothèque (récursif, conteneurs compris).</summary>
+    /// <summary>
+    /// Tous les éléments d'une bibliothèque (récursif, conteneurs compris). Par ParentId, Jellyfin cherche par dossier
+    /// racine (TopParentId), toujours renseigné ; la table des ancêtres, elle, peut manquer pour une partie des éléments.
+    /// Les dossiers racines eux-mêmes sont exclus : leur étiquette vaudrait pour toute la bibliothèque.
+    /// </summary>
     public IReadOnlyList<BaseItem> Members(CollectionFolder library)
-        => _libraryManager.GetItemList(new InternalItemsQuery { AncestorIds = [library.Id] });
+    {
+        var roots = library.PhysicalFolderIds.ToHashSet();
+        return _libraryManager.GetItemList(new InternalItemsQuery { ParentId = library.Id, Recursive = true })
+            .Where(i => !roots.Contains(i.Id))
+            .ToList();
+    }
 
     /// <param name="onlyAllowed">Faux si l'admin restreint déjà l'utilisateur par étiquettes autorisées : le mode « Uniquement » l'élargirait.</param>
     public Plan Build(User user, UserSelection selection, bool onlyAllowed)
@@ -81,6 +90,7 @@ public sealed class SelectionPlanner
             })
             .ToList();
         plan.UsesShow = libraries.Any(l => l.Mode == ContentMode.Only);
+        var onlyFolders = libraries.Where(l => l.Mode == ContentMode.Only).SelectMany(l => l.Library.PhysicalFolderIds).ToHashSet();
 
         var visible = new HashSet<Guid>();
         var musicGenres = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -130,8 +140,11 @@ public sealed class SelectionPlanner
 #if JF10
                 plan.Show.UnionWith(libVisible);
 #else
-                // 12.x : l'étiquette de la bibliothèque vaut pour tout son contenu ; « hide » reste prioritaire.
+                // 12.x : l'étiquette de la bibliothèque vaut pour tout son contenu ; « hide » reste prioritaire. Jellyfin la
+                // lit dans la table des ancêtres, parfois incomplète : on étiquette aussi ses dossiers racines (TopParentId,
+                // toujours renseigné), sauf ceux partagés avec une bibliothèque en « Uniquement ».
                 plan.Show.Add(library.Id);
+                plan.Show.UnionWith(library.PhysicalFolderIds.Where(id => !onlyFolders.Contains(id)));
 #endif
             }
 

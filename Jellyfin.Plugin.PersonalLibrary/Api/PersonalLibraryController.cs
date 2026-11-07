@@ -310,7 +310,9 @@ public class PersonalLibraryController : ControllerBase
         };
         if (flat)
         {
-            query.AncestorIds = [library.Id];
+            // Par la bibliothèque (ParentId) : Jellyfin cherche par dossier racine (TopParentId), comme ses propres listes,
+            // et non par la table des ancêtres, parfois incomplète.
+            query.ParentId = library.Id;
             query.Recursive = true;
         }
         else
@@ -426,7 +428,8 @@ public class PersonalLibraryController : ControllerBase
     private User? CurrentUser()
     {
         var value = User.FindFirstValue(UserIdClaim);
-        return Guid.TryParse(value, out var id) ? _userManager.GetUserById(id) : null;
+        // Clé d'API : pas d'utilisateur (identifiant vide).
+        return Guid.TryParse(value, out var id) && !id.Equals(Guid.Empty) ? _userManager.GetUserById(id) : null;
     }
 
     private bool IsAdmin() => User.IsInRole("Administrator");
@@ -435,6 +438,11 @@ public class PersonalLibraryController : ControllerBase
     private User? Target(Guid? userId)
     {
         var me = CurrentUser();
+        if (me is null && IsAdmin() && userId is { } id && !id.Equals(Guid.Empty))
+        {
+            return _userManager.GetUserById(id);
+        }
+
         if (me is null || userId is null || userId.Value.Equals(Guid.Empty) || userId.Value.Equals(me.Id))
         {
             return me;

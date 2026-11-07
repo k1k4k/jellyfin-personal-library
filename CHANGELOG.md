@@ -2,6 +2,11 @@
 
 What's new in each version, as shown in Jellyfin's plugin catalog.
 
+## 0.1.2
+
+- With one content type in "Only…" mode, other types left on "Everything" could lose part of their items (movies, episodes) and every collection, which then kept loading forever. This happened on servers where Jellyfin no longer links some items to their library in its database; the plugin now relies on the library's root folders, as Jellyfin's own lists do.
+- "My library" search now finds every item of a library on those servers too.
+
 ## 0.1.1
 
 - The "My library" button no longer shows over the video player.

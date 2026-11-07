@@ -73,7 +73,7 @@ Jellyfin can already hide items from a user: **Dashboard → Users → user → 
 Good to know:
 
 - The technical tags show up in the metadata editor and in the "Tags" filter. Don't remove them by hand; use the window or the reset buttons.
-- In "Only…" mode, Jellyfin hides everything that doesn't carry the user's "show" tag, on the whole server. The plugin therefore also tags the other content types left on "Everything", the genres, the user's playlists and the collections that contain something visible. On Jellyfin 12, a single tag on each library is enough; on 10.11 every item is tagged, which takes longer the first time on a big library.
+- In "Only…" mode, Jellyfin hides everything that doesn't carry the user's "show" tag, on the whole server. The plugin therefore also tags the other content types left on "Everything", the genres, the user's playlists and the collections that contain something visible. On Jellyfin 12, a tag on each library and on its root folders is enough; on 10.11 every item is tagged, which takes longer the first time on a big library.
 - Tags are saved without running metadata savers: no `.nfo` file is rewritten.
 - If a user is already restricted by "Allow items with tags", "Only…" isn't offered to them: it would widen the restriction.
 - An item hidden this way can't be listed, searched or opened, but someone who knows its exact ID can still stream it (same as Jellyfin's own tag restrictions). This is a personal view, not a security boundary between users.
