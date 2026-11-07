@@ -2,6 +2,10 @@
 
 What's new in each version, as shown in Jellyfin's plugin catalog.
 
+## 0.1.3
+
+- Collections now open when the "Collections" library is disabled or missing: Jellyfin still groups movies into collections in the movie library, and with a content type in "Only…" mode those collections were left without the user's tag and kept loading forever. They now follow the "Everything" mode.
+
 ## 0.1.2
 
 - With one content type in "Only…" mode, other types left on "Everything" could lose part of their items (movies, episodes) and every collection, which then kept loading forever. This happened on servers where Jellyfin no longer links some items to their library in its database; the plugin now relies on the library's root folders, as Jellyfin's own lists do.

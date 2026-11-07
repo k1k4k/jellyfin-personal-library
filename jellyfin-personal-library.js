@@ -19,7 +19,7 @@
     'use strict';
 
     if (window.__jfPersonalLibrary) return;
-    var VERSION = '0.1.2';
+    var VERSION = '0.1.3';
     var TAG = '[PersonalLibrary]';
     window.__jfPersonalLibrary = { version: VERSION };
 

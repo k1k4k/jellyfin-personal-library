@@ -95,7 +95,7 @@ public sealed class SelectionPlanner
         var visible = new HashSet<Guid>();
         var musicGenres = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var otherGenres = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var boxSetLibraries = new List<(CollectionFolder Library, ContentMode Mode, IReadOnlyList<BaseItem> Members, HashSet<Guid> Picked)>();
+        var boxSetLibraries = new List<(CollectionFolder? Library, ContentMode Mode, IReadOnlyList<BaseItem> Members, HashSet<Guid> Picked)>();
         foreach (var (library, mode, rules) in libraries)
         {
             var members = Members(library);
@@ -156,6 +156,17 @@ public sealed class SelectionPlanner
                     (m is Audio or MusicAlbum or MusicArtist ? musicGenres : otherGenres).UnionWith(m.Genres);
                 }
             }
+        }
+
+        // Collections hors d'une bibliothèque Collections accessible (bibliothèque désactivée ou absente) : Jellyfin les montre
+        // quand même, regroupées dans les films ; elles suivent le mode « Tout ».
+        var planned = boxSetLibraries.SelectMany(l => l.Members).Select(m => m.Id).ToHashSet();
+        var orphans = _libraryManager.GetItemList(new InternalItemsQuery { IncludeItemTypes = [BaseItemKind.BoxSet], Recursive = true })
+            .Where(b => !planned.Contains(b.Id))
+            .ToList();
+        if (orphans.Count > 0)
+        {
+            boxSetLibraries.Add((null, ContentMode.All, orphans, []));
         }
 
         PlanBoxSets(plan, boxSetLibraries, visible);
@@ -264,7 +275,7 @@ public sealed class SelectionPlanner
     /// Collections : une collection dont aucun élément n'est visible est masquée (« Tout sauf ») ou non gardée
     /// (« Uniquement ») ; sinon elle suit le mode de la bibliothèque Collections et ses règles.
     /// </summary>
-    private void PlanBoxSets(Plan plan, List<(CollectionFolder Library, ContentMode Mode, IReadOnlyList<BaseItem> Members, HashSet<Guid> Picked)> libraries, HashSet<Guid> visible)
+    private void PlanBoxSets(Plan plan, List<(CollectionFolder? Library, ContentMode Mode, IReadOnlyList<BaseItem> Members, HashSet<Guid> Picked)> libraries, HashSet<Guid> visible)
     {
         foreach (var (_, mode, members, picked) in libraries)
         {
